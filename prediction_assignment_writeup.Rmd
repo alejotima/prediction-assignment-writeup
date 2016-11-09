@@ -1,0 +1,66 @@
+---
+title: "prediction-assignment-writeup"
+author: "Manuel Alejandro Ramírez"
+date: "11/8/2016"
+output: html_document
+---
+
+# Executive Summary
+
+* Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+# Load and read data
+
+* In this step I read training and testing files, and load required libraries.
+* The following libraries were used throughout the code.
+```{r}
+setwd("/Users/manuelramirez/Coursera/especializacion_data_science/practical_machine_learning/prediction-assignment-writeup")
+library("data.table")
+library("caret")
+library("randomForest")
+library("foreach")
+library("rpart")
+library("rpart.plot")
+library("corrplot")
+
+tra_data <- read.csv("pml-training.csv", na.strings=c("#DIV/0!"," ", "", "NA", "NAs", "NULL"))
+tes_data <- read.csv("pml-testing.csv", na.strings=c("#DIV/0!"," ", "", "NA", "NAs", "NULL"))
+```
+
+There was a lot of NA values in the data which would create a lot of noise for the model.
+
+```{r}
+trn_nas <- apply(tra_data, 2, function(x) {sum(is.na(x))})
+trn_clean <- tra_data[,which(trn_nas == 0)]
+trn_clean <- trn_clean[8:length(trn_clean)]
+featset <- colnames(trn_clean[colSums(is.na(trn_clean)) == 0])[-(1:7)]
+modeldata <- trn_clean[featset]
+featset
+```
+
+## Model
+
+* I cut  training and cross validation in a 60% for training and 40% for testing is the usual to train the model and then test it against data it was not specifically fitted to.
+```{r}
+idx <- createDataPartition(modeldata$classe, p=0.6, list=FALSE )
+training <- modeldata[idx,]
+testing <- modeldata[-idx,]
+```
+
+* I  was selected radom forest to predict the classification because it has methods for balancing error in class population unbalanced data sets. A 5 fold cross validation is used.
+```{r}
+control <- trainControl(method="cv", 5)
+model <- train(classe ~ ., data=training, method="rf", trControl=control, ntree=250)
+model
+```
+
+## Predictions
+
+*I aplied the model in the original testing data, the data set was then loaded into R and cleaned, the model was then used to predict the classifications of the 20 results of this new data.
+```{r}
+result <- predict(model, training[, -length(names(training))])
+result
+```  
+
+## Conclusion
+As a conclusion one can predict what kind of exercise a person is doing.
